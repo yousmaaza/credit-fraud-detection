@@ -27,3 +27,8 @@ mlflow:
   run_name: "lightgbm_dev"
   registry_uri: "sqlite:///mlflow.db"
   artifact_location: "models/mlflow-artifacts"
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  model_version: "latest"

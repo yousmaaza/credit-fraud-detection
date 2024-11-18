@@ -145,12 +145,10 @@ class ConfigurationManager:
 
         # Initialize MLflow configs with environment variables
         self.mlflow = MLflowConfig(
-            tracking_uri=os.getenv("MLFLOW_TRACKING_URI", "mlruns"),
-            experiment_name=os.getenv(
-                "MLFLOW_EXPERIMENT_NAME", f"fraud_detection_{self.env}"
-            ),
-            run_name=os.getenv("MLFLOW_RUN_NAME", "lightgbm_default"),
-            registry_uri=os.getenv("MLFLOW_REGISTRY_URI", "sqlite:///mlflow.db"),
+            tracking_uri=self.project_root / config["mlflow"]["tracking_uri"],
+            experiment_name=config["mlflow"]["experiment_name"],
+            run_name=config["mlflow"]["run_name"],
+            registry_uri=config["mlflow"]["registry_uri"],
             artifact_location=self.project_root / config["mlflow"]["artifact_location"],
         )
 
