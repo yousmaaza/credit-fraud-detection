@@ -1,0 +1,29 @@
+data:
+  train_path: "data/raw/creditcard.csv"
+  processed_data_dir: "data/processed"
+  model_artifacts_dir: "models/artifacts"
+  log_dir: "logs"
+
+model:
+  target_column: "Class"
+  features_to_exclude: ["Time", "Class"]
+  val_size: 0.2
+  random_state: 42
+  early_stopping_rounds: 10  # Shorter for development
+  model_params:
+    objective: "binary"
+    metric: "auc"
+    boosting_type: "gbdt"
+    num_leaves: 16  # Smaller for faster training
+    learning_rate: 0.1
+    feature_fraction: 1.0
+    bagging_fraction: 1.0
+    bagging_freq: 0
+    verbose: -1
+
+mlflow:
+  tracking_uri: "mlruns"
+  experiment_name: "fraud_detection_dev"
+  run_name: "lightgbm_dev"
+  registry_uri: "sqlite:///mlflow.db"
+  artifact_location: "models/mlflow-artifacts"
