@@ -225,21 +225,6 @@ The project uses GitHub Actions for CI/CD:
    - Model evaluation
    - Optional deployment
 
-## 📈 Monitoring
-
-Prometheus metrics available at `/metrics`:
-- Model prediction latency
-- Request counts
-- Error rates
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch: `git checkout -b feature/amazing-feature`
-3. Run tests and quality checks
-4. Commit your changes: `git commit -m 'feat: add amazing feature'`
-5. Push to the branch: `git push origin feature/amazing-feature`
-6. Open a pull request
 
 ## 📝 License
 
