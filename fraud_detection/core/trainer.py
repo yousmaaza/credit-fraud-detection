@@ -122,6 +122,10 @@ class ModelTrainer:
         train_preds = model.predict(train_features)
         val_preds = model.predict(val_features)
 
+        # Ensure predictions are numpy arrays
+        train_preds = np.array(train_preds)
+        val_preds = np.array(val_preds)
+
         # Calculate metrics
         metrics = self._calculate_metrics(
             train_target, train_preds, val_target, val_preds, thresholds=[0.5, 0.6, 0.7]

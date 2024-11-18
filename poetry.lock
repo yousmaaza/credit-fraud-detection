@@ -1759,6 +1759,21 @@ test = ["hypothesis (>=6.46.1)", "pytest (>=7.3.2)", "pytest-xdist (>=2.2.0)"]
 xml = ["lxml (>=4.9.2)"]
 
 [[package]]
+name = "pandas-stubs"
+version = "2.2.3.241009"
+description = "Type annotations for pandas"
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "pandas_stubs-2.2.3.241009-py3-none-any.whl", hash = "sha256:3a6f8f142105a42550be677ba741ba532621f4e0acad2155c0e7b2450f114cfa"},
+    {file = "pandas_stubs-2.2.3.241009.tar.gz", hash = "sha256:d4ab618253f0acf78a5d0d2bfd6dffdd92d91a56a69bdc8144e5a5c6d25be3b5"},
+]
+
+[package.dependencies]
+numpy = ">=1.23.5"
+types-pytz = ">=2022.1.1"
+
+[[package]]
 name = "pathspec"
 version = "0.12.1"
 description = "Utility library for gitignore style pattern matching of file paths."
@@ -2714,6 +2729,17 @@ files = [
 ]
 
 [[package]]
+name = "types-pytz"
+version = "2024.2.0.20241003"
+description = "Typing stubs for pytz"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-pytz-2024.2.0.20241003.tar.gz", hash = "sha256:575dc38f385a922a212bac00a7d6d2e16e141132a3c955078f4a4fd13ed6cb44"},
+    {file = "types_pytz-2024.2.0.20241003-py3-none-any.whl", hash = "sha256:3e22df1336c0c6ad1d29163c8fda82736909eb977281cb823c57f8bae07118b7"},
+]
+
+[[package]]
 name = "types-pyyaml"
 version = "6.0.12.20240917"
 description = "Typing stubs for PyYAML"
@@ -2935,4 +2961,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "9c92ee374b9737f54114230c772d771f02682b99e31c52955ce078293b275f20"
+content-hash = "cf2c5a576b65404ef45eafacf73528716d89b0a14af1807dd2547198a89a1dff"

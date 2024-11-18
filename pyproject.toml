@@ -35,6 +35,8 @@ flake8-docstrings = "^1.7.0"
 flake8-quotes = "^3.4.0"
 flake8-bugbear = "^24.10.31"
 types-pyyaml = "^6.0.12.20240917"
+pydantic = "^2.9.2"
+pandas-stubs = "^2.2.3.241009"
 
 
 [build-system]
@@ -49,15 +51,3 @@ include = '\.pyi?$'
 [tool.isort]
 profile = "black"
 multi_line_output = 3
-
-[tool.mypy]
-python_version = "3.10"
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_return_any = true
-strict_optional = true
