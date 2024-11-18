@@ -8,7 +8,6 @@ A production-ready machine learning system for detecting fraudulent credit card 
 - MLflow experiment tracking and model versioning
 - Comprehensive CLI for data and model management
 - Configurable environments (development/production)
-- Monitoring with Prometheus metrics
 - Automated testing and CI/CD pipeline
 
 ## 🏗️ Project Structure
@@ -22,6 +21,9 @@ fraud_detection/
 │   ├── raw/              # Raw dataset files
 │   └── processed/        # Processed datasets
 ├── fraud_detection/       # Main package
+│   ├── api/              # API implementation
+│   │   ├── app.py        # FastAPI application
+│   │   └── schemas.py    # features and response schemas
 │   ├── cli/              # CLI commands
 │   │   ├── data.py       # Data management commands
 │   │   └── inference.py  # Inference commands

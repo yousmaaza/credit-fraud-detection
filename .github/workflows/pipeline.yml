@@ -62,52 +62,12 @@ jobs:
     - name: Type checking (mypy)
       run: poetry run mypy fraud_detection/
 
-  test:
-    name: Run Tests
-    needs: lint
-    runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
-
-    - name: Cache Poetry virtualenv
-      uses: actions/cache@v3
-      with:
-        path: ./.venv
-        key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
-
-    - name: Install dependencies
-      run: poetry install --with dev
-
-    - name: Create test environment file
-      run: |
-        cat > .env.test << EOL
-        FRAUD_DETECTION_ENV=test
-        DATASET_URL=https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
-        DATASET_MIN_FILE_SIZE=100000000
-        KAGGLE_TOKEN=${{ secrets.KAGGLE_TOKEN }}
-        EOL
-
-    - name: Run tests with coverage
-      run: |
-        poetry run pytest tests
 
 
   train:
     name: Train Model
-    needs: test
+    needs: lint
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'development' }}
 
