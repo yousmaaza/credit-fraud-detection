@@ -21,6 +21,7 @@ python-dotenv = "^1.0.0"
 gunicorn = "^23.0.0"
 types-pyyaml = "^6.0.12.20240917"
 pyyaml = "^6.0.2"
+tqdm = "^4.67.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -70,3 +71,5 @@ markers = [
     "integration: Integration tests",
     "slow: Tests that take longer to run"
 ]
+[tool.poetry.scripts]
+fraud-detection = "fraud_detection.cli.main:cli"

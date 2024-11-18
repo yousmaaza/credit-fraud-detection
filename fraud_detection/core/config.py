@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import yaml
 from dotenv import load_dotenv
@@ -100,6 +100,10 @@ class ConfigurationManager:
 
         # Update env after loading .env file (in case it was changed)
         self.env = os.getenv("FRAUD_DETECTION_ENV", "development")
+
+    def _get_kaggle_token(self) -> Optional[str]:
+        """Get Kaggle API token from environment."""
+        return os.getenv("KAGGLE_TOKEN")
 
     def _get_config_path(self) -> Path:
         """Get configuration file path from environment variables."""

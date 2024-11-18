@@ -1,12 +1,13 @@
 """Simple tests for configuration and MLflow handler."""
 import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import mlflow
 import pytest
 import yaml
-import mlflow
 from dotenv import load_dotenv
+
 from fraud_detection.core.config import ConfigurationManager
 from fraud_detection.core.mlflow_handler import MLflowHandler
 
@@ -25,7 +26,7 @@ def setup_test_env(tmp_path) -> Path:
             "train_path": "data/raw/creditcard.csv",
             "processed_data_dir": "data/processed",
             "model_artifacts_dir": "models/artifacts",
-            "log_dir": "logs"
+            "log_dir": "logs",
         },
         "model": {
             "target_column": "Class",
@@ -36,21 +37,17 @@ def setup_test_env(tmp_path) -> Path:
             "model_params": {
                 "objective": "binary",
                 "metric": "auc",
-                "boosting_type": "gbdt"
-            }
+                "boosting_type": "gbdt",
+            },
         },
         "mlflow": {
             "tracking_uri": "mlruns",
             "experiment_name": "fraud_detection_test",
             "run_name": "test_run",
             "registry_uri": "sqlite:///mlflow_test.db",
-            "artifact_location": "models/mlflow-artifacts"
+            "artifact_location": "models/mlflow-artifacts",
         },
-        "api": {
-            "host": "0.0.0.0",
-            "port": 8000,
-            "model_version": "latest"
-        }
+        "api": {"host": "0.0.0.0", "port": 8000, "model_version": "latest"},
     }
 
     with open(tmp_path / "config" / "development.yaml", "w") as f:
@@ -72,7 +69,6 @@ def setup_test_env(tmp_path) -> Path:
     os.environ["FRAUD_DETECTION_ENV"] = "development"
     os.environ["FRAUD_DETECTION_CONFIG"] = str(tmp_path / "config/development.yaml")
 
-
     return tmp_path
 
 
@@ -86,7 +82,7 @@ def test_config_initialization(setup_test_env):
     """
     load_dotenv(dotenv_path=setup_test_env / ".env.development")
 
-    with patch('fraud_detection.core.config.Path') as mock_path:
+    with patch("fraud_detection.core.config.Path") as mock_path:
         mock_path.return_value.parent.parent.parent = setup_test_env
         mock_path.return_value = setup_test_env / "fraud_detection/core/config.py"
 
@@ -108,7 +104,7 @@ def test_mlflow_experiment_creation(setup_test_env):
     """
     load_dotenv(dotenv_path=setup_test_env / ".env.development")
 
-    with patch('fraud_detection.core.config.Path') as mock_path:
+    with patch("fraud_detection.core.config.Path") as mock_path:
         mock_path.return_value.parent.parent.parent = setup_test_env
         mock_path.return_value = setup_test_env / "fraud_detection/core/config.py"
 
@@ -116,12 +112,16 @@ def test_mlflow_experiment_creation(setup_test_env):
         config = ConfigurationManager()
 
         # Mock MLflow experiment
-        with patch('mlflow.get_experiment_by_name', return_value=None), \
-                patch('mlflow.create_experiment', return_value="test-1"), \
-                patch('mlflow.set_tracking_uri'):
+        with patch("mlflow.get_experiment_by_name", return_value=None), patch(
+            "mlflow.create_experiment", return_value="test-1"
+        ), patch("mlflow.set_tracking_uri"):
             # Initialize MLflow handler
             mlflow_handler = MLflowHandler(config)
 
             # Check basic MLflow setup
-            assert mlflow_handler.config.mlflow.experiment_name == "fraud_detection_test"
-            assert mlflow_handler.config.mlflow.tracking_uri == setup_test_env / "mlruns"
+            assert (
+                mlflow_handler.config.mlflow.experiment_name == "fraud_detection_test"
+            )
+            assert (
+                mlflow_handler.config.mlflow.tracking_uri == setup_test_env / "mlruns"
+            )

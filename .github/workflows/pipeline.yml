@@ -1,5 +1,4 @@
-# .github/workflows/pipeline.yml
-name: ML Pipeline
+name: Fraud Detection Pipeline
 
 on:
   push:
@@ -9,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to run training in'
+        description: 'Environment to run in'
         required: true
         default: 'development'
         type: choice
@@ -17,96 +16,104 @@ on:
           - development
           - production
 
+env:
+  PYTHON_VERSION: '3.10'
+  POETRY_VERSION: '1.6.1'
+  KAGGLE_TOKEN: ${{ secrets.KAGGLE_TOKEN }}
+
 jobs:
   lint:
-    name: Lint and Type Check
+    name: Code Quality Checks
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-
-    - name: Configure Poetry
-      run: |
+        curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
         poetry config virtualenvs.create true
         poetry config virtualenvs.in-project true
 
     - name: Cache Poetry virtualenv
       uses: actions/cache@v3
-      id: cache
       with:
         path: ./.venv
-        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-poetry-
+        key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Install Dependencies
-      if: steps.cache.outputs.cache-hit != 'true'
+    - name: Install dependencies
       run: poetry install --with dev
 
-    - name: Run Linting Checks
-      run: |
-        echo "Running linting checks..."
+    - name: Check formatting (black)
+      run: poetry run black . --check
 
-        echo "=== Black Check ==="
-        poetry run black . --check
+    - name: Check imports (isort)
+      run: poetry run isort . --check-only
 
-        echo "=== Import Sort Check ==="
-        poetry run isort . --check-only
+    - name: Run linter (flake8)
+      run: poetry run flake8 fraud_detection/
 
-        echo "=== Flake8 Check ==="
-        poetry run flake8 fraud_detection/ tests/
-
-        echo "=== Type Check ==="
-        poetry run mypy fraud_detection/
-
-        echo "All linting checks passed! ✨"
+    - name: Type checking (mypy)
+      run: poetry run mypy fraud_detection/
 
   test:
-    name: Unit Tests and Quality Checks
+    name: Run Tests
     needs: lint
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-
-    - name: Configure Poetry
-      run: |
+        curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
         poetry config virtualenvs.create true
         poetry config virtualenvs.in-project true
 
     - name: Cache Poetry virtualenv
       uses: actions/cache@v3
-      id: cache
       with:
         path: ./.venv
-        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+        key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Install Dependencies
-      if: steps.cache.outputs.cache-hit != 'true'
+    - name: Install dependencies
       run: poetry install --with dev
 
-    - name: Run Basic Tests
+    - name: Create test environment file
       run: |
-        poetry run pytest tests/core/test_check.py -v
+        cat > .env.test << EOL
+        FRAUD_DETECTION_ENV=test
+        DATASET_URL=https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
+        DATASET_MIN_FILE_SIZE=100000000
+        KAGGLE_TOKEN=${{ secrets.KAGGLE_TOKEN }}
+        MLFLOW_TRACKING_URI=mlruns
+        MLFLOW_REGISTRY_URI=sqlite:///mlflow_test.db
+        EOL
 
+    - name: Run tests with coverage
+      run: |
+        poetry run pytest tests/ \
+          --cov=fraud_detection \
+          --cov-report=xml \
+          --cov-report=term-missing
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
 
   train:
     name: Train Model
@@ -115,59 +122,50 @@ jobs:
     environment: ${{ github.event.inputs.environment || 'development' }}
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Install Poetry
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
+        curl -sSL https://install.python-poetry.org | python3 - --version ${{ env.POETRY_VERSION }}
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      with:
+        path: ./.venv
+        key: ${{ runner.os }}-venv-${{ hashFiles('**/poetry.lock') }}
 
     - name: Install dependencies
       run: poetry install
 
-    - name: Create environment file
+    - name: Set up environment
+      env:
+        ENV: ${{ github.event.inputs.environment || 'development' }}
       run: |
-        if [ "${{ github.event.inputs.environment }}" = "production" ]; then
-          echo "FRAUD_DETECTION_ENV=production" > .env
-          echo "FRAUD_DETECTION_CONFIG=config/production.yaml" >> .env
-        else
-          echo "FRAUD_DETECTION_ENV=development" > .env
-          echo "FRAUD_DETECTION_CONFIG=config/development.yaml" >> .env
-        fi
-    - name: Set up data directories
-      run: |
-        mkdir -p data/raw data/processed models/artifacts logs mlruns
+        # Create environment file
+        cat > .env.$ENV << EOL
+        FRAUD_DETECTION_ENV=$ENV
+        DATASET_URL=https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
+        DATASET_MIN_FILE_SIZE=100000000
+        KAGGLE_TOKEN=${{ secrets.KAGGLE_TOKEN }}
+        EOL
 
     - name: Download dataset
       run: |
-        # Download dataset using curl with Kaggle token
-        curl -L -o archive.zip \
-          -H "Authorization: Basic ${{ secrets.KAGGLE_TOKEN }}" \
-          https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
-
-        # Unzip to data/raw directory
-        unzip archive.zip -d data/raw
-
-        # Clean up zip file
-        rm archive.zip
-
-        # Verify file exists
-        if [ ! -f data/raw/creditcard.csv ]; then
-          echo "Error: creditcard.csv not found after extraction"
-          exit 1
-        fi
-
-        echo "Successfully downloaded and extracted dataset"
+        poetry run fraud-detection data download \
+          --env ${{ github.event.inputs.environment || 'development' }}
 
     - name: Train model
-      env:
-        PYTHONPATH: ${{ github.workspace }}
       run: |
-        poetry run python -m fraud_detection.core.trainer
+        poetry run fraud-detection train run \
+          --env ${{ github.event.inputs.environment || 'development' }}
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
@@ -179,33 +177,12 @@ jobs:
           logs/
         retention-days: 7
 
-    - name: Cleanup
+    - name: Notify on completion
       if: always()
       run: |
-        rm -rf data/raw/*.csv
-        rm -rf models/artifacts/*
-        rm -f .env
-
-  notify:
-    name: Notify Status
-    needs: [lint, test, train]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-    - name: Check Pipeline Status
-      env:
-        LINT_STATUS: ${{ needs.lint.result }}
-        TEST_STATUS: ${{ needs.test.result }}
-        TRAIN_STATUS: ${{ needs.train.result }}
-      run: |
-        if [ "$LINT_STATUS" = "success" ] && [ "$TEST_STATUS" = "success" ] && [ "$TRAIN_STATUS" = "success" ]; then
+        if [ "${{ job.status }}" = "success" ]; then
           echo "✅ Pipeline completed successfully!"
-          exit 0
         else
           echo "❌ Pipeline failed!"
-          echo "Lint status: $LINT_STATUS"
-          echo "Test status: $TEST_STATUS"
-          echo "Train status: $TRAIN_STATUS"
           exit 1
         fi

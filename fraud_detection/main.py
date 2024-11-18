@@ -11,6 +11,7 @@ def main() -> None:
 
     try:
         # Load and prepare data
+        data_loader.download_data()  # Will only download if needed
         raw_data = data_loader.load_raw_data()
         train_df, val_df = data_loader.split_data(raw_data)
 

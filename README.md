@@ -6,24 +6,27 @@ A production-ready machine learning system for detecting fraudulent credit card 
 
 - Real-time fraud detection via REST API
 - MLflow experiment tracking and model versioning
+- Comprehensive CLI for data and model management
 - Configurable environments (development/production)
-- Comprehensive testing and CI/CD pipeline
-- Prometheus metrics for monitoring
-- Docker support for deployment
+- Monitoring with Prometheus metrics
+- Automated testing and CI/CD pipeline
 
 ## 🏗️ Project Structure
 
 ```
 fraud_detection/
 ├── config/                 # Configuration files
-│   ├── development.yaml
-│   └── production.yaml
+│   ├── development.yaml   # Development environment config
+│   └── production.yaml    # Production environment config
 ├── data/                  # Data directory (gitignored)
-│   ├── raw/
-│   └── processed/
+│   ├── raw/              # Raw dataset files
+│   └── processed/        # Processed datasets
 ├── fraud_detection/       # Main package
+│   ├── cli/              # CLI commands
+│   │   ├── data.py      # Data management commands
+│   │   └── train.py     # Training commands
 │   ├── core/             # Core functionality
-│   │   ├── config.py
+│   │   ├── config.py    # Configuration management
 │   │   ├── data_loader.py
 │   │   ├── mlflow_handler.py
 │   │   └── trainer.py
@@ -40,7 +43,7 @@ fraud_detection/
 
 - Python 3.10+
 - Poetry for dependency management
-- Access to the Credit Card Fraud Detection dataset
+- Kaggle account for dataset access
 
 ### Installation
 
@@ -66,30 +69,68 @@ cp .env.template .env.development
 
 # Edit environment variables
 vim .env.development
+
+# Required variables:
+FRAUD_DETECTION_ENV=development
+KAGGLE_TOKEN=your_kaggle_token
 ```
 
-4. Download the dataset:
+### Using the CLI
+
+The project provides a comprehensive CLI for managing data and training models:
+
+1. Data Management:
 ```bash
-# Using provided script
-poetry run python scripts/download_data.py
+# Show available data commands
+poetry run fraud-detection data --help
+
+# Download the dataset
+poetry run fraud-detection data download
+
+# Validate downloaded data
+poetry run fraud-detection data validate
+
+# Show data information
+poetry run fraud-detection data info
 ```
 
-### Running the System
-
-1. Train the model:
+2. Model Training:
 ```bash
-# Run training pipeline
-poetry run python -m fraud_detection.core.trainer
+# Show available training commands
+poetry run fraud-detection train --help
+
+# Train the model
+poetry run fraud-detection train run
+
+# Evaluate a model
+poetry run fraud-detection train evaluate --run-id <mlflow-run-id>
 ```
 
-2. Start the API:
+### Configuration
+
+The project uses both YAML configuration files and environment variables:
+
+1. Environment Variables (.env files):
 ```bash
-poetry run uvicorn fraud_detection.api.app:app --reload
+# Development environment
+FRAUD_DETECTION_ENV=development
+DATASET_URL=https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
+DATASET_MIN_FILE_SIZE=100000000
+KAGGLE_TOKEN=your_token_here
 ```
 
-3. View MLflow dashboard:
-```bash
-poetry run mlflow ui
+2. Configuration Files (config/):
+```yaml
+# development.yaml
+data:
+  train_path: "data/raw/creditcard.csv"
+  processed_data_dir: "data/processed"
+  # ...
+
+model:
+  target_column: "Class"
+  features_to_exclude: ["Time", "Class"]
+  # ...
 ```
 
 ## 🧪 Development
@@ -100,14 +141,11 @@ poetry run mlflow ui
 # Run all tests
 poetry run pytest
 
-# Run specific test file
-poetry run pytest tests/core/test_simple.py
-
 # Run with coverage
 poetry run pytest --cov=fraud_detection
 ```
 
-### Code Quality Checks
+### Code Quality
 
 ```bash
 # Format code
@@ -124,82 +162,69 @@ poetry run flake8 fraud_detection/
 ### Pre-commit Hooks
 
 ```bash
-# Install pre-commit hooks
+# Install hooks
 poetry run pre-commit install
 
-# Run hooks manually
+# Run manually
 poetry run pre-commit run --all-files
-```
-
-## 🔄 CI/CD Pipeline
-
-The project uses GitHub Actions for CI/CD with the following stages:
-
-1. **Lint**: Code quality checks
-2. **Test**: Run test suite
-3. **Train**: Train and validate model
-4. **Deploy**: (Optional) Deploy model to production
-
-To run the pipeline locally:
-```bash
-# Run pipeline script
-./scripts/run_pipeline.sh
 ```
 
 ## 📊 MLflow Tracking
 
-MLflow is used for experiment tracking and model versioning:
+View and manage experiments:
 
 ```bash
-# View experiments
+# Start MLflow UI
 poetry run mlflow ui
 
-# Train with tracking
-MLFLOW_TRACKING_URI=mlruns poetry run python -m fraud_detection.core.trainer
+# View at http://localhost:5000
 ```
 
-## 🛠️ Configuration
+## 🔍 API Usage
 
-The system uses a hierarchical configuration system:
+Start the API server:
 
-1. Environment variables (highest priority)
-2. Environment-specific config files
-3. Default configuration (lowest priority)
-
-Example configuration:
 ```bash
-# Set environment
-export FRAUD_DETECTION_ENV=development
+# Development server
+poetry run uvicorn fraud_detection.api.app:app --reload
 
-# Use specific config
-export FRAUD_DETECTION_CONFIG=config/development.yaml
+# Production server
+poetry run gunicorn fraud_detection.api.app:app
 ```
 
-## 🔍 API Documentation
-
-Once running, API documentation is available at:
+API documentation available at:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
+## 🔄 CI/CD Pipeline
+
+The project uses GitHub Actions for CI/CD:
+
+1. On Pull Request:
+   - Code quality checks
+   - Tests
+   - Development training
+
+2. On Main Branch:
+   - Full training pipeline
+   - Model evaluation
+   - Optional deployment
+
 ## 📈 Monitoring
 
-Prometheus metrics are exposed at `/metrics` endpoint:
+Prometheus metrics available at `/metrics`:
 - Model prediction latency
 - Request counts
 - Error rates
 
-## 🔐 Security
-
-- Sensitive data is handled via environment variables
-- Model artifacts are versioned and tracked
-- API endpoints include rate limiting
-
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch
+2. Create your feature branch: `git checkout -b feature/amazing-feature`
 3. Run tests and quality checks
-4. Submit a pull request
+4. Commit your changes: `git commit -m 'feat: add amazing feature'`
+5. Push to the branch: `git push origin feature/amazing-feature`
+6. Open a pull request
 
 ## 📝 License
 
@@ -210,9 +235,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Credit Card Fraud Detection dataset from Kaggle
 - MLflow for experiment tracking
 - FastAPI for API implementation
-
-Would you like me to:
-1. Add more specific examples?
-2. Add troubleshooting section?
-3. Add deployment instructions?
-4. Add performance benchmarks?
