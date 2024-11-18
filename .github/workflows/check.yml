@@ -1,0 +1,64 @@
+name: Code Quality Checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      id: cache
+      with:
+        path: ./.venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run All Checks
+      run: |
+        echo "Running code quality checks..."
+
+        echo "\n=== Black Check ==="
+        poetry run black . --check || exit 1
+
+        echo "\n=== Import Sort Check ==="
+        poetry run isort . --check-only || exit 1
+
+        echo "\n=== Flake8 Check ==="
+        poetry run flake8 fraud_detection/ tests/ || exit 1
+
+        echo "\n=== Type Check ==="
+        poetry run mypy fraud_detection/ || exit 1
+
+        echo "\n=== Test Coverage ==="
+        poetry run pytest --cov=fraud_detection tests/ || exit 1
+
+        echo "\nAll checks passed! ✨ 🍰 ✨"
