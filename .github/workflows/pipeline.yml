@@ -1,0 +1,216 @@
+# .github/workflows/pipeline.yml
+name: ML Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run training in'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - production
+
+jobs:
+  lint:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      id: cache
+      with:
+        path: ./.venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install Dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run Linting Checks
+      run: |
+        echo "Running linting checks..."
+
+        echo "=== Black Check ==="
+        poetry run black . --check
+
+        echo "=== Import Sort Check ==="
+        poetry run isort . --check-only
+
+        echo "=== Flake8 Check ==="
+        poetry run flake8 fraud_detection/ tests/
+
+        echo "=== Type Check ==="
+        poetry run mypy fraud_detection/
+
+        echo "All linting checks passed! ✨"
+
+  test:
+    name: Unit Tests and Quality Checks
+    needs: lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+
+    - name: Cache Poetry virtualenv
+      uses: actions/cache@v3
+      id: cache
+      with:
+        path: ./.venv
+        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+
+    - name: Install Dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: poetry install --with dev
+
+    - name: Run Tests with Coverage
+      run: |
+        poetry run pytest tests/ --cov=fraud_detection --cov-report=xml
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: true
+
+  train:
+    name: Train Model
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'development' }}
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Create environment file
+      run: |
+        if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+          echo "FRAUD_DETECTION_ENV=production" > .env
+          echo "FRAUD_DETECTION_CONFIG=config/production.yaml" >> .env
+        else
+          echo "FRAUD_DETECTION_ENV=development" > .env
+          echo "FRAUD_DETECTION_CONFIG=config/development.yaml" >> .env
+        fi
+    - name: Set up data directories
+      run: |
+        mkdir -p data/raw data/processed models/artifacts logs mlruns
+
+    - name: Download dataset
+      run: |
+        # Download dataset using curl with Kaggle token
+        curl -L -o archive.zip \
+          -H "Authorization: Basic ${{ secrets.KAGGLE_TOKEN }}" \
+          https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
+
+        # Unzip to data/raw directory
+        unzip archive.zip -d data/raw
+
+        # Clean up zip file
+        rm archive.zip
+
+        # Verify file exists
+        if [ ! -f data/raw/creditcard.csv ]; then
+          echo "Error: creditcard.csv not found after extraction"
+          exit 1
+        fi
+
+        echo "Successfully downloaded and extracted dataset"
+
+    - name: Train model
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        poetry run python -m fraud_detection.core.trainer
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: model-artifacts-${{ github.event.inputs.environment || 'development' }}
+        path: |
+          models/
+          mlruns/
+          logs/
+        retention-days: 7
+
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -rf data/raw/*.csv
+        rm -rf models/artifacts/*
+        rm -f .env
+
+  notify:
+    name: Notify Status
+    needs: [lint, test, train]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Check Pipeline Status
+      env:
+        LINT_STATUS: ${{ needs.lint.result }}
+        TEST_STATUS: ${{ needs.test.result }}
+        TRAIN_STATUS: ${{ needs.train.result }}
+      run: |
+        if [ "$LINT_STATUS" = "success" ] && [ "$TEST_STATUS" = "success" ] && [ "$TRAIN_STATUS" = "success" ]; then
+          echo "✅ Pipeline completed successfully!"
+          exit 0
+        else
+          echo "❌ Pipeline failed!"
+          echo "Lint status: $LINT_STATUS"
+          echo "Test status: $TEST_STATUS"
+          echo "Train status: $TRAIN_STATUS"
+          exit 1
+        fi
