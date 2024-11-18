@@ -224,3 +224,44 @@ class MLflowHandler:
         except Exception as e:
             self.logger.error(f"Error logging model: {str(e)}")
             raise
+
+    # fraud_detection/core/mlflow_handler.py
+
+    def promote_model(self) -> None:
+        """Promote the latest staging model to production."""
+        try:
+            # Get the latest version of the model in the "Staging" stage
+            staging_versions = self.client.get_latest_versions(
+                self.config.mlflow.registered_model_name, stages=["Staging"]
+            )
+            if not staging_versions:
+                raise ValueError("No model found in the 'Staging' stage")
+
+            latest_staging_version = staging_versions[0].version
+
+            # Transition the latest staging model to the "Production" stage
+            self.client.transition_model_version_stage(
+                name=self.config.mlflow.registered_model_name,
+                version=latest_staging_version,
+                stage="Production",
+            )
+
+            # Archive the previous production version if it exists
+            production_versions = self.client.get_latest_versions(
+                self.config.mlflow.registered_model_name, stages=["Production"]
+            )
+            for version in production_versions:
+                if version.version != latest_staging_version:
+                    self.client.transition_model_version_stage(
+                        name=self.config.mlflow.registered_model_name,
+                        version=version.version,
+                        stage="Archived",
+                    )
+
+            self.config.logger.info(
+                f"Model version {latest_staging_version} promoted to 'Production' stage"
+            )
+
+        except Exception as e:
+            self.config.logger.error(f"Error promoting model: {str(e)}")
+            raise

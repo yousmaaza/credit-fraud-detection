@@ -40,6 +40,7 @@ class MLflowConfig:
     run_name: str
     registry_uri: str
     artifact_location: Path
+    registered_model_name: str
 
 
 @dataclass
@@ -154,6 +155,7 @@ class ConfigurationManager:
             run_name=config["mlflow"]["run_name"],
             registry_uri=config["mlflow"]["registry_uri"],
             artifact_location=self.project_root / config["mlflow"]["artifact_location"],
+            registered_model_name=config["mlflow"]["registered_model_name"],
         )
 
         self.api = APIConfig(**config["api"])

@@ -23,8 +23,11 @@ fraud_detection/
 │   └── processed/        # Processed datasets
 ├── fraud_detection/       # Main package
 │   ├── cli/              # CLI commands
-│   │   ├── data.py      # Data management commands
-│   │   └── train.py     # Training commands
+│   │   ├── data.py       # Data management commands
+│   │   └── inference.py  # Inference commands
+│   │   ├── main.py       # Fraud Application commands
+│   │   └── promote.py    # Promoting the model from staging to production
+│   │   └── train.py      # Training commands
 │   ├── core/             # Core functionality
 │   │   ├── config.py    # Configuration management
 │   │   ├── data_loader.py
@@ -102,10 +105,22 @@ poetry run fraud-detection train --help
 # Train the model
 poetry run fraud-detection train run
 
-# Evaluate a model
-poetry run fraud-detection train evaluate --run-id <mlflow-run-id>
+```
+3. Promote the model from staging to production:
+```bash
+# Promote the model
+poetry run fraud-detection promote
 ```
 
+4. Batch inference:
+```bash
+# Show available inference commands
+poetry run fraud-detection inference --help
+
+# Run batch inference
+poetry run fraud-detection inference INPUT_DATA OUTPUT_DATA
+
+```
 ### Configuration
 
 The project uses both YAML configuration files and environment variables:

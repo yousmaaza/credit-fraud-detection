@@ -200,8 +200,19 @@ class ModelTrainer:
         self.mlflow.log_model(
             model,
             artifact_path="model",
-            registered_model_name="fraud_detection_model",
+            registered_model_name=self.config.mlflow.registered_model_name,
             input_example=input_example,
+        )
+
+        # Transition the model to the "Staging" stage
+        latest_version = self.mlflow.client.get_latest_versions(
+            self.config.mlflow.registered_model_name, stages=["None"]
+        )[0].version
+
+        self.mlflow.client.transition_model_version_stage(
+            name=self.config.mlflow.registered_model_name,
+            version=latest_version,
+            stage="Staging",
         )
 
     def _create_input_example(self, features: list[str]) -> pd.DataFrame:

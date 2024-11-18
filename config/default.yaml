@@ -28,6 +28,7 @@ mlflow:
   run_name: "lightgbm_baseline"
   registry_uri: "sqlite:///mlflow.db"
   artifact_location: "models/mlflow-artifacts"
+  registered_model_name: "fraud_detection_model"
 
 api:
   host: "0.0.0.0"

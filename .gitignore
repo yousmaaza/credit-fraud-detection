@@ -99,3 +99,5 @@ fraud_detection/config/*.yaml
 !fraud_detection/config/*.template.yaml
 training_metrics.json
 /fraud_detection/output/
+/fraud_detection/api/mlruns/
+/fraud_detection/mlruns/
