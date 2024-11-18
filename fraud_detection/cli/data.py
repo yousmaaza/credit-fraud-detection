@@ -1,7 +1,6 @@
 """Data management commands."""
 import sys
 
-
 import click
 from dotenv import load_dotenv
 from tqdm import tqdm

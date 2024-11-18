@@ -1,7 +1,6 @@
 """Training commands."""
 import sys
 
-
 import click
 from dotenv import load_dotenv
 
