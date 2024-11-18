@@ -1,14 +1,14 @@
-from typing import Type, Dict
+from typing import Dict, Type
+
 from pydantic import BaseModel, create_model
+
 from fraud_detection.core.config import ConfigurationManager
 from fraud_detection.core.inference import ModelInference
 
 
 # Dynamically generate and cache the PredictionRequest schema
 def generate_prediction_request_schema() -> Type[BaseModel]:
-    """
-    Dynamically generate a schema for PredictionRequest.
-    """
+    """Dynamically generate a schema for PredictionRequest."""
     # Load model configuration and schema
     config = ConfigurationManager()
     model_inference = ModelInference(config)
@@ -26,9 +26,11 @@ def generate_prediction_request_schema() -> Type[BaseModel]:
 
 
 # Explicitly assign the dynamically generated schema
-PredictionRequest = generate_prediction_request_schema() # type: ignore
+PredictionRequest = generate_prediction_request_schema()  # type: ignore
 
 
 # Define a concrete response schema
 class PredictionResponse(BaseModel):
+    """Dynamically generate a schema for PredictionRequest."""
+
     prediction: float
