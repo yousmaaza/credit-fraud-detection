@@ -98,22 +98,12 @@ jobs:
         DATASET_URL=https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
         DATASET_MIN_FILE_SIZE=100000000
         KAGGLE_TOKEN=${{ secrets.KAGGLE_TOKEN }}
-        MLFLOW_TRACKING_URI=mlruns
-        MLFLOW_REGISTRY_URI=sqlite:///mlflow_test.db
         EOL
 
     - name: Run tests with coverage
       run: |
-        poetry run pytest tests/ \
-          --cov=fraud_detection \
-          --cov-report=xml \
-          --cov-report=term-missing
+        poetry run pytest tests
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
 
   train:
     name: Train Model
