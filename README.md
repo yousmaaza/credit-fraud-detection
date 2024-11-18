@@ -49,4 +49,3 @@ poetry run mypy .
 poetry run pytest --cov
 ```
 
-other files[]: # Path: .gitignore
