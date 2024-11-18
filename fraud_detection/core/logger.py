@@ -1,7 +1,7 @@
 import logging
-from pathlib import Path
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
 
 
 def setup_logger(log_dir: Path) -> logging.Logger:
@@ -17,19 +17,17 @@ def setup_logger(log_dir: Path) -> logging.Logger:
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create logger
-    logger = logging.getLogger('fraud_detection')
+    logger = logging.getLogger("fraud_detection")
     logger.setLevel(logging.INFO)
 
     # Create formatters
     file_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    console_formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(message)s'
-    )
+    console_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 
     # File handler with timestamp
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = log_dir / f"fraud_detection_{timestamp}.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(logging.INFO)

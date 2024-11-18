@@ -1,15 +1,16 @@
 from pathlib import Path
 from typing import Dict, Tuple
-import pandas as pd
-import numpy as np
+
 import lightgbm as lgb
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from sklearn.metrics import (
-    roc_auc_score,
     average_precision_score,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score
+    roc_auc_score,
 )
 
 from fraud_detection.core.config import ConfigurationManager
@@ -35,10 +36,7 @@ class ModelTrainer:
         self.model_dir.mkdir(parents=True, exist_ok=True)
 
     def train(
-            self,
-            train_data: pd.DataFrame,
-            val_data: pd.DataFrame,
-            features: list[str]
+        self, train_data: pd.DataFrame, val_data: pd.DataFrame, features: list[str]
     ) -> lgb.Booster:
         """
         Train the model and log metrics with MLflow.
@@ -55,20 +53,12 @@ class ModelTrainer:
 
         try:
             # Prepare datasets
-            train_features, train_target = self._prepare_data(
-                train_data, features
-            )
-            val_features, val_target = self._prepare_data(
-                val_data, features
-            )
+            train_features, train_target = self._prepare_data(train_data, features)
+            val_features, val_target = self._prepare_data(val_data, features)
 
             # Create LightGBM datasets
             train_set = lgb.Dataset(train_features, train_target)
-            val_set = lgb.Dataset(
-                val_features,
-                val_target,
-                reference=train_set
-            )
+            val_set = lgb.Dataset(val_features, val_target, reference=train_set)
 
             # Start MLflow run
             with self.mlflow.start_run():
@@ -80,9 +70,7 @@ class ModelTrainer:
 
                 # Evaluate model
                 self._evaluate_model(
-                    model,
-                    train_features, train_target,
-                    val_features, val_target
+                    model, train_features, train_target, val_features, val_target
                 )
 
                 # Save artifacts
@@ -96,21 +84,12 @@ class ModelTrainer:
             raise
 
     def _prepare_data(
-            self,
-            data: pd.DataFrame,
-            features: list[str]
+        self, data: pd.DataFrame, features: list[str]
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """Prepare features and target for training."""
-        return (
-            data[features],
-            data[self.config.model.target_column]
-        )
+        return (data[features], data[self.config.model.target_column])
 
-    def _train_model(
-            self,
-            train_set: lgb.Dataset,
-            val_set: lgb.Dataset
-    ) -> lgb.Booster:
+    def _train_model(self, train_set: lgb.Dataset, val_set: lgb.Dataset) -> lgb.Booster:
         """Train LightGBM model."""
         self.logger.info("Training LightGBM model")
 
@@ -118,25 +97,25 @@ class ModelTrainer:
             params=self.config.model.model_params,
             train_set=train_set,
             valid_sets=[train_set, val_set],
-            valid_names=['train', 'val'],
+            valid_names=["train", "val"],
             callbacks=[
                 lgb.early_stopping(
                     stopping_rounds=self.config.model.early_stopping_rounds,
-                    verbose=False
+                    verbose=False,
                 ),
-                lgb.log_evaluation(period=100)
-            ]
+                lgb.log_evaluation(period=100),
+            ],
         )
 
         return model
 
     def _evaluate_model(
-            self,
-            model: lgb.Booster,
-            train_features: pd.DataFrame,
-            train_target: pd.Series,
-            val_features: pd.DataFrame,
-            val_target: pd.Series
+        self,
+        model: lgb.Booster,
+        train_features: pd.DataFrame,
+        train_target: pd.Series,
+        val_features: pd.DataFrame,
+        val_target: pd.Series,
     ) -> None:
         """Evaluate model and log metrics."""
         # Get predictions
@@ -145,8 +124,7 @@ class ModelTrainer:
 
         # Calculate metrics
         metrics = self._calculate_metrics(
-            train_target, train_preds,
-            val_target, val_preds
+            train_target, train_preds, val_target, val_preds, thresholds=[0.5, 0.6, 0.7]
         )
 
         # Log metrics
@@ -154,23 +132,19 @@ class ModelTrainer:
         self.logger.info(f"Model metrics: {metrics}")
 
     def _calculate_metrics(
-            self,
-            train_target: pd.Series,
-            train_preds: np.ndarray,
-            val_target: pd.Series,
-            val_preds: np.ndarray,
-            thresholds: list[float] = [0.5, 0.7, 0.9]
+        self,
+        train_target: pd.Series,
+        train_preds: np.ndarray,
+        val_target: pd.Series,
+        val_preds: np.ndarray,
+        thresholds: list[float],
     ) -> Dict[str, float]:
         """Calculate model performance metrics."""
         metrics = {
             "train_auc": roc_auc_score(train_target, train_preds),
             "val_auc": roc_auc_score(val_target, val_preds),
-            "train_avg_precision": average_precision_score(
-                train_target, train_preds
-            ),
-            "val_avg_precision": average_precision_score(
-                val_target, val_preds
-            )
+            "train_avg_precision": average_precision_score(train_target, train_preds),
+            "val_avg_precision": average_precision_score(val_target, val_preds),
         }
 
         # Calculate metrics at different thresholds
@@ -185,9 +159,7 @@ class ModelTrainer:
             metrics[f"train_recall_{threshold}"] = recall_score(
                 train_target, train_pred_labels
             )
-            metrics[f"train_f1_{threshold}"] = f1_score(
-                train_target, train_pred_labels
-            )
+            metrics[f"train_f1_{threshold}"] = f1_score(train_target, train_pred_labels)
 
             # Validation metrics
             metrics[f"val_precision_{threshold}"] = precision_score(
@@ -196,9 +168,7 @@ class ModelTrainer:
             metrics[f"val_recall_{threshold}"] = recall_score(
                 val_target, val_pred_labels
             )
-            metrics[f"val_f1_{threshold}"] = f1_score(
-                val_target, val_pred_labels
-            )
+            metrics[f"val_f1_{threshold}"] = f1_score(val_target, val_pred_labels)
 
         return metrics
 
@@ -209,20 +179,14 @@ class ModelTrainer:
             "n_features": len(features),
             "early_stopping_rounds": self.config.model.early_stopping_rounds,
             "random_state": self.config.model.random_state,
-            **self.config.model.model_params
+            **self.config.model.model_params,
         }
         self.mlflow.log_params(params)
 
-    def _save_artifacts(
-            self,
-            model: lgb.Booster,
-            features: list[str]
-    ) -> None:
+    def _save_artifacts(self, model: lgb.Booster, features: list[str]) -> None:
         """Save and log model artifacts."""
         # Create and save feature importance plot
-        importance_plot_path = self._create_feature_importance_plot(
-            model, features
-        )
+        importance_plot_path = self._create_feature_importance_plot(model, features)
         self.mlflow.log_artifact(importance_plot_path)
 
         # Create model signature and input example
@@ -233,7 +197,7 @@ class ModelTrainer:
             model,
             artifact_path="model",
             registered_model_name="fraud_detection_model",
-            input_example=input_example
+            input_example=input_example,
         )
 
     def _create_input_example(self, features: list[str]) -> pd.DataFrame:
@@ -249,30 +213,28 @@ class ModelTrainer:
         # Get a sample from training data if available
         example_data = {feature: 0.0 for feature in features}
         return pd.DataFrame([example_data])
+
     def _create_feature_importance_plot(
-            self,
-            model: lgb.Booster,
-            features: list[str]
+        self, model: lgb.Booster, features: list[str]
     ) -> Path:
         """Create feature importance plot."""
         plt.figure(figsize=(10, 6))
 
-        importance_df = pd.DataFrame({
-            'feature': features,
-            'importance': model.feature_importance(importance_type='gain')
-        })
-        importance_df = importance_df.sort_values('importance', ascending=True)
-
-        plt.barh(
-            importance_df['feature'],
-            importance_df['importance']
+        importance_df = pd.DataFrame(
+            {
+                "feature": features,
+                "importance": model.feature_importance(importance_type="gain"),
+            }
         )
-        plt.title('Feature Importance (Gain)')
-        plt.xlabel('Importance')
+        importance_df = importance_df.sort_values("importance", ascending=True)
+
+        plt.barh(importance_df["feature"], importance_df["importance"])
+        plt.title("Feature Importance (Gain)")
+        plt.xlabel("Importance")
 
         # Save plot
         plot_path = self.model_dir / "feature_importance.png"
-        plt.savefig(plot_path, bbox_inches='tight', dpi=300)
+        plt.savefig(plot_path, bbox_inches="tight", dpi=300)
         plt.close()
 
         return plot_path

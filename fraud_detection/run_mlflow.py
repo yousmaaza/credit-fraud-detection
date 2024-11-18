@@ -1,4 +1,5 @@
 import subprocess
+
 from fraud_detection.core.config import ConfigurationManager
 
 # Load configuration
@@ -10,11 +11,16 @@ artifact_location = config.mlflow.artifact_location
 
 # Construct the command
 command = [
-    "mlflow", "server",
-    "--backend-store-uri", tracking_uri,
-    "--default-artifact-root", str(artifact_location),
-    "--host", "0.0.0.0",
-    "--port", "5050"
+    "mlflow",
+    "server",
+    "--backend-store-uri",
+    tracking_uri,
+    "--default-artifact-root",
+    str(artifact_location),
+    "--host",
+    "0.0.0.0",
+    "--port",
+    "5050",
 ]
 
 # Run the command

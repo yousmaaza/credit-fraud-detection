@@ -48,4 +48,3 @@ poetry run mypy .
 # Run tests with coverage
 poetry run pytest --cov
 ```
-

@@ -1,12 +1,14 @@
 # fraud_detection/core/mlflow_handler.py
-from pathlib import Path
-from typing import Optional, Dict, Any, Union
-import mlflow
-from mlflow.tracking import MlflowClient
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
+
+import mlflow
+import pandas as pd
+from mlflow.tracking import MlflowClient
 
 from fraud_detection.core.config import ConfigurationManager
-import pandas as pd
+
 
 class MLflowHandler:
     """Handles MLflow experiment tracking and model registry."""
@@ -23,7 +25,9 @@ class MLflowHandler:
         self.logger = config.logger
 
         # Set up MLflow paths
-        tracking_uri = (self.config.project_root / self.config.mlflow.tracking_uri).resolve()
+        tracking_uri = (
+            self.config.project_root / self.config.mlflow.tracking_uri
+        ).resolve()
         tracking_uri.mkdir(parents=True, exist_ok=True)
 
         # Set MLflow tracking URI
@@ -47,19 +51,18 @@ class MLflowHandler:
             experiment_id: ID of the experiment
         """
         # Resolve artifact location path
-        artifact_location = (self.config.project_root /
-                             self.config.mlflow.artifact_location).resolve()
+        artifact_location = (
+            self.config.project_root / self.config.mlflow.artifact_location
+        ).resolve()
         artifact_location.mkdir(parents=True, exist_ok=True)
 
         # Get or create experiment
-        experiment = mlflow.get_experiment_by_name(
-            self.config.mlflow.experiment_name
-        )
+        experiment = mlflow.get_experiment_by_name(self.config.mlflow.experiment_name)
 
         if experiment is None:
             experiment_id = mlflow.create_experiment(
                 name=self.config.mlflow.experiment_name,
-                artifact_location=str(artifact_location)
+                artifact_location=str(artifact_location),
             )
             self.logger.info(
                 f"Created new MLflow experiment with id: {experiment_id}\n"
@@ -72,7 +75,7 @@ class MLflowHandler:
                 f"Artifact Location: {experiment.artifact_location}"
             )
 
-        return experiment_id
+        return str(experiment_id)
 
     def start_run(self, run_name: Optional[str] = None) -> mlflow.ActiveRun:
         """
@@ -88,7 +91,7 @@ class MLflowHandler:
         mlflow.set_experiment(self.config.mlflow.experiment_name)
 
         run_name = run_name or self.config.mlflow.run_name
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         run_name = f"{run_name}_{timestamp}"
 
         self.logger.info(
@@ -96,10 +99,7 @@ class MLflowHandler:
             f"in experiment: {self.config.mlflow.experiment_name}"
         )
 
-        return mlflow.start_run(
-            experiment_id=self.experiment_id,
-            run_name=run_name
-        )
+        return mlflow.start_run(experiment_id=self.experiment_id, run_name=run_name)
 
     def log_params(self, params: Dict[str, Any]) -> None:
         """
@@ -119,9 +119,7 @@ class MLflowHandler:
             raise
 
     def log_metrics(
-            self,
-            metrics: Dict[str, float],
-            step: Optional[int] = None
+        self, metrics: Dict[str, float], step: Optional[int] = None
     ) -> None:
         """
         Log metrics to current run.
@@ -142,9 +140,7 @@ class MLflowHandler:
             raise
 
     def log_artifact(
-            self,
-            local_path: Union[str, Path],
-            artifact_path: Optional[str] = None
+        self, local_path: Union[str, Path], artifact_path: Optional[str] = None
     ) -> None:
         """
         Log an artifact to the current MLflow run.
@@ -161,13 +157,9 @@ class MLflowHandler:
                 raise FileNotFoundError(f"Artifact not found: {local_path}")
 
             # Log the artifact
-            mlflow.log_artifact(
-                str(local_path),
-                artifact_path=artifact_path
-            )
+            mlflow.log_artifact(str(local_path), artifact_path=artifact_path)
 
-            artifact_info = (f" in {artifact_path}" if artifact_path
-                             else "")
+            artifact_info = f" in {artifact_path}" if artifact_path else ""
             self.logger.debug(
                 f"Logged artifact '{local_path.name}'{artifact_info} "
                 f"in experiment '{self.config.mlflow.experiment_name}'"
@@ -178,11 +170,11 @@ class MLflowHandler:
             raise
 
     def log_model(
-            self,
-            model: Any,
-            artifact_path: str,
-            registered_model_name: Optional[str] = None,
-            input_example: Optional[pd.DataFrame] = None
+        self,
+        model: Any,
+        artifact_path: str,
+        registered_model_name: Optional[str] = None,
+        input_example: Optional[pd.DataFrame] = None,
     ) -> None:
         """
         Log and optionally register a model.
@@ -196,8 +188,7 @@ class MLflowHandler:
         try:
             # Create model signature
             signature = mlflow.models.infer_signature(
-                input_example,
-                model.predict(input_example)
+                input_example, model.predict(input_example)
             )
 
             # Ensure we're in the correct experiment
@@ -208,7 +199,7 @@ class MLflowHandler:
                 artifact_path,
                 registered_model_name=registered_model_name,
                 signature=signature,
-                input_example=input_example
+                input_example=input_example,
             )
 
             message = (
@@ -219,10 +210,12 @@ class MLflowHandler:
             if registered_model_name:
                 try:
                     model_version = self.client.get_latest_versions(
-                        registered_model_name,
-                        stages=["None"]
+                        registered_model_name, stages=["None"]
                     )[0].version
-                    message += f" and updated registered model '{registered_model_name}' to version {model_version}"
+                    message += (
+                        f" and updated registered model '{registered_model_name}' "
+                        f"to version {model_version}"
+                    )
                 except Exception:
                     message += f" and registered as new model '{registered_model_name}'"
 

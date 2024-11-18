@@ -1,16 +1,18 @@
-# fraud_detection/core/config.py
-from pathlib import Path
-from typing import Dict, Any, Optional
-from dataclasses import dataclass
-import yaml
 import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict
+
+import yaml
 from dotenv import load_dotenv
+
 from fraud_detection.core.logger import setup_logger
 
 
 @dataclass
 class DataConfig:
     """Data configuration parameters."""
+
     train_path: Path
     processed_data_dir: Path
     model_artifacts_dir: Path
@@ -20,6 +22,7 @@ class DataConfig:
 @dataclass
 class ModelConfig:
     """Model configuration parameters."""
+
     target_column: str
     features_to_exclude: list[str]
     val_size: float
@@ -31,6 +34,7 @@ class ModelConfig:
 @dataclass
 class MLflowConfig:
     """MLflow's configuration parameters."""
+
     tracking_uri: str
     experiment_name: str
     run_name: str
@@ -41,6 +45,7 @@ class MLflowConfig:
 @dataclass
 class APIConfig:
     """API configuration parameters."""
+
     host: str
     port: int
     model_version: str
@@ -76,7 +81,8 @@ class ConfigurationManager:
 
         # Look for environment-specific .env file first
         env_paths = [
-            self.project_root / f".env.{self.env}",  # .env.development or .env.production
+            self.project_root
+            / f".env.{self.env}",  # .env.development or .env.production
             self.project_root / ".env",  # fallback to default .env
         ]
 
@@ -121,13 +127,14 @@ class ConfigurationManager:
         if not self.config_path.exists():
             raise FileNotFoundError(f"Config file not found: {self.config_path}")
 
-        with open(self.config_path, 'r') as f:
+        with open(self.config_path, "r") as f:
             config = yaml.safe_load(f)
 
         # Initialize data paths relative to project root
         data_config = config["data"]
         self.data = DataConfig(
-            train_path=self.project_root / os.getenv("FRAUD_DETECTION_DATA", data_config["train_path"]),
+            train_path=self.project_root
+            / os.getenv("FRAUD_DETECTION_DATA", data_config["train_path"]),
             processed_data_dir=self.project_root / data_config["processed_data_dir"],
             model_artifacts_dir=self.project_root / data_config["model_artifacts_dir"],
             log_dir=self.project_root / data_config["log_dir"],
@@ -139,10 +146,12 @@ class ConfigurationManager:
         # Initialize MLflow configs with environment variables
         self.mlflow = MLflowConfig(
             tracking_uri=os.getenv("MLFLOW_TRACKING_URI", "mlruns"),
-            experiment_name=os.getenv("MLFLOW_EXPERIMENT_NAME", f"fraud_detection_{self.env}"),
+            experiment_name=os.getenv(
+                "MLFLOW_EXPERIMENT_NAME", f"fraud_detection_{self.env}"
+            ),
             run_name=os.getenv("MLFLOW_RUN_NAME", "lightgbm_default"),
             registry_uri=os.getenv("MLFLOW_REGISTRY_URI", "sqlite:///mlflow.db"),
-            artifact_location=self.project_root / config["mlflow"]["artifact_location"]
+            artifact_location=self.project_root / config["mlflow"]["artifact_location"],
         )
 
         self.api = APIConfig(**config["api"])
@@ -153,7 +162,7 @@ class ConfigurationManager:
             "FRAUD_DETECTION_ENV",
             "FRAUD_DETECTION_DATA",
             "MLFLOW_TRACKING_URI",
-            "MLFLOW_REGISTRY_URI"
+            "MLFLOW_REGISTRY_URI",
         ]
 
         # Check required environment variables
@@ -172,6 +181,8 @@ class ConfigurationManager:
         # Environment-specific validations
         if self.env == "production":
             if not Path(self.mlflow.tracking_uri).exists():
-                raise ValueError(f"MLflow tracking URI not found: {self.mlflow.tracking_uri}")
+                raise ValueError(
+                    f"MLflow tracking URI not found: {self.mlflow.tracking_uri}"
+                )
 
         self.logger.info("Configuration validated successfully")

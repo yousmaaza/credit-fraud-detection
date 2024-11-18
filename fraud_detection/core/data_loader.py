@@ -1,8 +1,9 @@
-from pathlib import Path
-from typing import Tuple
-import pandas as pd
 import logging
+from typing import Tuple
+
+import pandas as pd
 from sklearn.model_selection import train_test_split
+
 from fraud_detection.core.config import ConfigurationManager
 
 logger = logging.getLogger(__name__)
@@ -10,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class DataValidationError(Exception):
     """Raised when data validation fails."""
+
     pass
 
 
@@ -75,6 +77,7 @@ class DataLoader:
         # Log class distribution
         class_dist = df[self.config.model.target_column].value_counts()
         self.logger.info(f"Class distribution:\n{class_dist.to_dict()}")
+
     def save_processed_data(self, df: pd.DataFrame, name: str) -> None:
         """
         Save processed data to parquet format.
@@ -117,7 +120,7 @@ class DataLoader:
             df,
             test_size=self.config.model.val_size,
             random_state=self.config.model.random_state,
-            stratify=df[self.config.model.target_column]
+            stratify=df[self.config.model.target_column],
         )
 
         # Save splits

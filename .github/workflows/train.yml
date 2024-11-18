@@ -85,19 +85,19 @@ jobs:
         curl -L -o archive.zip \
           -H "Authorization: Basic ${{ secrets.KAGGLE_TOKEN }}" \
           https://www.kaggle.com/api/v1/datasets/download/mlg-ulb/creditcardfraud
-        
+
         # Unzip to data/raw directory
         unzip archive.zip -d data/raw
-        
+
         # Clean up zip file
         rm archive.zip
-        
+
         # Verify file exists
         if [ ! -f data/raw/creditcard.csv ]; then
           echo "Error: creditcard.csv not found after extraction"
           exit 1
         fi
-        
+
         echo "Successfully downloaded and extracted dataset"
 
     - name: Train model
